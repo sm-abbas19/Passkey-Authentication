@@ -1,11 +1,13 @@
 FROM python:3.10
 
-RUN apt-get update
-RUN apt-get install -y wait-for-it
-RUN pip install waitress
-ADD . /app
-WORKDIR /app
+RUN apt-get update && \
+    apt-get install -y wait-for-it && \
+    pip install waitress
 
+WORKDIR /app
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-CMD sh ./entrypoint.sh
+COPY . .
+
+CMD ["sh", "./entrypoint.sh"]
