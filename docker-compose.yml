@@ -23,12 +23,7 @@ services:
       POSTGRES_USER: 'databaseuser'
       POSTGRES_PASSWORD: 'supersecretdbpassword'
       POSTGRES_DB: 'app'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:latest
     command: redis-server --requirepass 'supersecretredispassword'
-
-volumes:
-  postgres_data:

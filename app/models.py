@@ -1,8 +1,10 @@
-from flask_sqlalchemy import SQLAlchemy
 import uuid
+
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
 
 db = SQLAlchemy()
+
 
 def _str_uuid():
     return str(uuid.uuid4())
@@ -19,11 +21,33 @@ class User(db.Model):
     credentials = db.relationship(
         "WebAuthnCredential",
         backref=backref("user", cascade="all, delete"),
-        lazy=True
+        lazy=True,
     )
 
     def __repr__(self):
         return f"<User {self.username}>"
+
+    @property
+    def is_authenticated(self):
+        """If we can access this user model from current user, they are authenticated,
+        so this always returns True."""
+        return True
+
+    @property
+    def is_anonymous(self):
+        """An actual user is never anonymous. Always returns False."""
+        return False
+
+    @property
+    def is_active(self):
+        """Returns True for all users for simplicity. This would need to be a column
+        in the database in order to deactivate users."""
+        return True
+
+    def get_id(self):
+        """Returns the user id. We're using the generated uuid rather than the database
+        primary key."""
+        return self.uid
 
 
 class WebAuthnCredential(db.Model):
@@ -37,9 +61,3 @@ class WebAuthnCredential(db.Model):
 
     def __repr__(self):
         return f"<Credential {self.credential_id}>"
-
-
-
-
-
-
