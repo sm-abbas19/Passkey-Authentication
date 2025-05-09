@@ -1,8 +1,8 @@
-"""Create user and credential tables
+"""initial migration
 
-Revision ID: 8a473eb9e801
+Revision ID: acf9b1838d55
 Revises: 
-Create Date: 2022-06-19 20:41:01.012914
+Create Date: 2025-05-09 13:03:38.201102
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8a473eb9e801'
+revision = 'acf9b1838d55'
 down_revision = None
 branch_labels = None
 depends_on = None

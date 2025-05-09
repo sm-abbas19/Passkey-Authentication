@@ -185,4 +185,5 @@ def logout():
 @auth.route("/user-profile")
 @login_required
 def user_profile():
-    return render_template("auth/user_profile.html")
+    pcco_json = security.prepare_credential_creation(current_user)
+    return render_template("auth/user_profile.html", public_credential_creation_options=pcco_json)

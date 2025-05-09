@@ -23,6 +23,8 @@ services:
       POSTGRES_USER: 'databaseuser'
       POSTGRES_PASSWORD: 'supersecretdbpassword'
       POSTGRES_DB: 'app'
+    ports:
+      - "5433:5432"
 
   redis:
     image: redis:latest

@@ -1,22 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="flex flex-col space-y-4">
-    <h4 class="font-bold text-2xl">User Profile Information</h4>
-    <div>
-      <strong class="font-bold">Name:</strong> {{ current_user.name }}
+  <div class="max-w-2xl mx-auto px-4 sm:px-0">
+    <div class="mb-6 flex items-center">
+      <div class="bg-primary-600 text-white p-3 rounded-full mr-4">
+        <i class="fas fa-user text-xl"></i>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">User Profile</h2>
     </div>
-    <div>
-      <strong class="font-bold">Username:</strong> {{ current_user.username }}
+    
+    <div class="card p-6 sm:p-8 mb-8">
+      <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Full Name</p>
+          <p class="text-lg font-medium">{{ current_user.name }}</p>
+        </div>
+        
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Username</p>
+          <p class="text-lg font-medium">{{ current_user.username }}</p>
+        </div>
+        
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">Email Address</p>
+          <p class="text-lg font-medium">{{ current_user.email }}</p>
+        </div>
+        
+        <div class="space-y-1">
+          <p class="text-sm text-gray-500 font-medium">User ID</p>
+          <p class="text-lg font-medium text-gray-700 font-mono text-sm">{{ current_user.uid }}</p>
+        </div>
+      </div>
+      
+      <div class="mt-8 pt-6 border-t border-gray-100">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold text-lg">Registered Credentials</h3>
+            <p class="text-gray-600">You have {{ current_user.credentials | length }} registered device(s)</p>
+          </div>
+          
+          <div class="bg-primary-50 text-primary-700 rounded-full h-12 w-12 flex items-center justify-center text-xl font-bold">
+            {{ current_user.credentials | length }}
+          </div>
+        </div>
+      </div>
     </div>
-    <div>
-      <strong class="font-bold">Email:</strong> {{ current_user.email }}
-    </div>
-    <div>
-      <strong class="font-bold">UID:</strong> {{ current_user.uid }}
-    </div>
-    <div>
-      <strong class="font-bold">Registered
-        Credentials:</strong> {{ current_user.credentials | length }}
-    </div>
+    
+    {% include "auth/_partials/register_credential.html" %}
   </div>
 {% endblock content %}

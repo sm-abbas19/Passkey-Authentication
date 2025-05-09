@@ -1,56 +1,91 @@
-<h1 class="font-bold text-xl">Hello, {{ username }}</h1>
-<p class="my-2">
-  If you have logged in on this device before, you may be able to use a
-  biometric method (Fingerprint Reader or Facial Recognition) or a security key.
-</p>
-<p class="my-2">
-  If you haven't logged in on this device before (or your device doesn't support
-  biometrics, choose email login. Then you can set up biometric authentication to
-  use in the future.
-</p>
-<div class="flex space-x-2">
-  <button
-    class="text-white uppercase font-bold bg-green-600 px-4 py-2 rounded"
-    id="start-login"
-  >
-    Device Login
-  </button>
-  <a
-    href="{{ url_for('auth.login_switch_user') }}"
-    class="text-white uppercase font-bold bg-black px-4 py-2 rounded"
-  >
-    Switch User
-  </a>
+<div class="text-center mb-6 sm:mb-8">
+  <div class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary-100 text-primary-600 rounded-full mb-3 sm:mb-4">
+    <i class="fas fa-fingerprint text-2xl sm:text-3xl"></i>
+  </div>
+  <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Welcome Back!</h2>
+  <p class="mt-2 text-sm sm:text-base text-gray-600">Hello, {{ username }}</p>
 </div>
+  
+<div class="space-y-6">
+    <div class="text-center">
+      <p class="text-gray-700">
+        Choose your preferred sign-in method below
+      </p>
+    </div>
+    
+    <div class="space-y-4">
+      <button
+        id="start-login"
+        class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+      >
+        <i class="fas fa-fingerprint mr-2 text-lg"></i>
+        Sign in with Device
+      </button>
+      
+      <a
+        href="{{ url_for('auth.login_switch_user') }}"
+        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+      >
+        <i class="fas fa-user-alt mr-2"></i>
+        Sign in as Different User
+      </a>
+    </div>
+    
+    <div class="border-t border-gray-200 pt-4 mt-4">
+      <p class="text-xs text-gray-500">
+        If this is your first time using this device, or if your device doesn't support biometrics,
+        you may need to set up device authentication after logging in with an alternative method.
+      </p>
+    </div>  </div>
 
 <script>
     document.getElementById('start-login').addEventListener('click', async () => {
+        // Show loading state
+        const button = document.getElementById('start-login');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Verifying...';
+        button.disabled = true;
+        
         // The auth_options dictionary is also a valid javascript object, so it can be injected here.
         const options = {{ auth_options | safe }};
 
         let asseResp;
         try {
             asseResp = await startAuthentication(options);
+            
+            const verificationResp = await fetch('{{ url_for("auth.verify_login_credential") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(asseResp),
+            })
+
+            const verificationJSON = await verificationResp.json();
+
+            if (verificationJSON && verificationJSON.verified) {
+                button.innerHTML = '<i class="fas fa-check mr-2"></i> Success!';
+                button.classList.remove('bg-primary-600');
+                button.classList.add('bg-green-600');
+                
+                setTimeout(() => {
+                    window.location.replace(verificationJSON.next);
+                }, 1000);
+            } else {
+                throw new Error("Verification failed");
+            }
         } catch (error) {
-            alert("Something went wrong");
-            console.error(error)
-        }
-
-        const verificationResp = await fetch('{{ url_for("auth.verify_login_credential") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(asseResp),
-        })
-
-        const verificationJSON = await verificationResp.json();
-
-        if (verificationJSON && verificationJSON.verified) {
-            window.location.replace(verificationJSON.next);
-        } else {
-            alert("login failed")
-            console.error(verificationJSON)
+            console.error(error);
+            button.innerHTML = '<i class="fas fa-times mr-2"></i> Authentication Failed';
+            button.classList.remove('bg-primary-600');
+            button.classList.add('bg-red-600');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                button.classList.remove('bg-red-600');
+                button.classList.add('bg-primary-600');
+            }, 2000);
         }
     })
 </script>
