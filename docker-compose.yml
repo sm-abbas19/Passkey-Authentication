@@ -9,6 +9,8 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: 'supersecretredispassword'
       SECRET_KEY: 'supersecretrandomkeythatsreallysecure'
+      RECAPTCHA_SITE_KEY: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+      RECAPTCHA_SECRET_KEY: '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'
     volumes:
       - ./app:/app
     ports:
@@ -24,8 +26,10 @@ services:
       POSTGRES_PASSWORD: 'supersecretdbpassword'
       POSTGRES_DB: 'app'
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
   redis:
     image: redis:latest
     command: redis-server --requirepass 'supersecretredispassword'
+    ports:
+      - "6379:6379"

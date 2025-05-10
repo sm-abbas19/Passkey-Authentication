@@ -32,27 +32,7 @@ AUTHENTICATION_CHALLENGE_KEYS = {}
 
 
 def _hostname():
-    """Get the hostname, properly handling ngrok tunneling."""
-    # First check for X-Forwarded-Host header (sent by ngrok)
-    forwarded_host = request.headers.get('X-Forwarded-Host')
-    if forwarded_host:
-        return str(forwarded_host)
-    
-    # Fall back to the standard hostname from the request
     return str(urlparse(request.base_url).hostname)
-
-
-def _origin():
-    """Get the origin for WebAuthn verification, handling ngrok properly."""
-    host = _hostname()
-    # Check if origin should be HTTPS or HTTP
-    if request.headers.get('X-Forwarded-Proto') == 'https':
-        return f"https://{host}" 
-    elif request.is_secure:
-        return f"https://{host}"
-    else:
-        # Allow HTTP for localhost development only
-        return f"http://{host}"
 
 
 def _generate_secure_challenge_key(user_uid, purpose="generic"):
@@ -124,7 +104,7 @@ def verify_and_save_credential(user, registration_credential):
     auth_verification = webauthn.verify_registration_response(
         credential=registration_credential,
         expected_challenge=expected_challenge,
-        expected_origin=_origin(),  # Use the new origin method
+        expected_origin=f"https://{_hostname()}",
         expected_rp_id=_hostname(),
     )
 
@@ -204,7 +184,7 @@ def verify_authentication_credential(user, authentication_credential):
     webauthn.verify_authentication_response(
         credential=authentication_credential,
         expected_challenge=expected_challenge,
-        expected_origin=_origin(),  # Use the new origin method
+        expected_origin=f"https://{_hostname()}",
         expected_rp_id=_hostname(),
         credential_public_key=stored_credential.credential_public_key,
         credential_current_sign_count=0

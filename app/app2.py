@@ -31,13 +31,9 @@ def verify_https():
     hostname = urlparse(request.url).hostname
     if hostname in ('localhost', '127.0.0.1'):
         return
-    
-    # Check for ngrok.io or ngrok-free.app domain and X-Forwarded-Proto header
-    is_ngrok = hostname and ('ngrok' in hostname)
-    forwarded_proto = request.headers.get('X-Forwarded-Proto')
-    
-    # Accept connections that are either secure or proxied through ngrok with HTTPS
-    if not (request.is_secure or (is_ngrok and forwarded_proto == 'https')):
+        
+    # Check for HTTPS
+    if not request.is_secure:
         app.logger.error("WebAuthn requires HTTPS! Application is being served over HTTP.")
         return """
         <h1>HTTPS Required</h1>
@@ -60,5 +56,11 @@ def index():
     return render_template("index.html")
 
 
+# Add a startup check to verify HTTPS configuration
 if __name__ == "__main__":
+    # Check if we're running with HTTPS
+    if not os.getenv("HTTPS_ENABLED") and not os.getenv("NGROK_URL"):
+        print("WARNING: WebAuthn requires HTTPS! Make sure you're using ngrok or another HTTPS solution.")
+        print("See README.md for instructions on setting up ngrok for development.")
+    
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
