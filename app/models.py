@@ -1,4 +1,5 @@
 import uuid
+import datetime
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
@@ -8,6 +9,26 @@ db = SQLAlchemy()
 
 def _str_uuid():
     return str(uuid.uuid4())
+
+# Add this to your existing models.py
+
+class ThirdPartyAccount(db.Model):
+    __tablename__ = "third_party_account"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    provider = db.Column(db.String(30), nullable=False)  # 'google', 'github', etc.
+    provider_user_id = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=True)
+    name = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+    # Create a unique constraint to prevent duplicate connections
+    __table_args__ = (db.UniqueConstraint('provider', 'provider_user_id', name='uq_provider_id'),)
+    
+    # Relationship to User model
+    user = db.relationship("User", backref=db.backref("third_party_accounts", lazy=True))
 
 
 class User(db.Model):
