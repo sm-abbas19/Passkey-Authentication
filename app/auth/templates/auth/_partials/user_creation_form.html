@@ -66,6 +66,20 @@
           >
         </div>
       </div>
+
+      <!-- Add this before the submit button -->
+      <div class="space-y-2">
+        <label for="captcha_answer" class="block text-sm font-medium text-gray-700">
+          {{ captcha_question|default("What is 3 + 4?") }}
+        </label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="fas fa-shield-alt"></i>
+          </div>
+          <input type="text" name="captcha_answer" id="captcha_answer"
+            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg" placeholder="Enter the answer" required>
+        </div>
+      </div>
       
       <div class="pt-2">
         <button

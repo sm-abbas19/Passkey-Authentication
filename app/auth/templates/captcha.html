@@ -1,0 +1,7 @@
+{# filepath: app/auth/templates/captcha.html #}
+{% macro captcha() %}
+<div>
+    <img src="{{ url_for('simple_captcha.captcha_image') }}" alt="CAPTCHA">
+    <input type="text" name="captcha" placeholder="Enter CAPTCHA" required>
+</div>
+{% endmacro %}

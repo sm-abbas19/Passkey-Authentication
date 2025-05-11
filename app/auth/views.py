@@ -25,15 +25,49 @@ from models import User, db
 auth = Blueprint("auth", __name__, template_folder="templates")
 
 
+import random
+
 @auth.route("/register")
 def register():
-    """Show the form for new users to register"""
-    return render_template("auth/register.html")
+    """Show the form for new users to register with a random math CAPTCHA"""
+    # Generate two random numbers for the CAPTCHA (1-9)
+    num1 = random.randint(1, 9)
+    num2 = random.randint(1, 9)
+    captcha_answer = num1 + num2
+    
+    # Store the answer in session for validation later
+    session["captcha_answer"] = str(captcha_answer)
+    
+    # Pass the question to the template
+    captcha_question = f"What is {num1} + {num2}?"
+    
+    return render_template("auth/register.html", captcha_question=captcha_question)
 
 
 @auth.route("/create-user", methods=["POST"])
 def create_user():
     """Handle creation of new users from the user creation form."""
+    # Dynamic math CAPTCHA validation
+    captcha_answer = request.form.get("captcha_answer")
+    expected_answer = session.get("captcha_answer")
+    
+    # Clear the session captcha to prevent replay attacks
+    session.pop("captcha_answer", None)
+    
+    if not expected_answer or captcha_answer != expected_answer:
+        # If validation fails, generate a new CAPTCHA
+        num1 = random.randint(1, 9)
+        num2 = random.randint(1, 9)
+        session["captcha_answer"] = str(num1 + num2)
+        captcha_question = f"What is {num1} + {num2}?"
+        
+        return render_template(
+            "auth/register.html",
+            captcha_question=captcha_question,
+            error="Security check failed. Please try again."
+        )
+    
+    # Continue with existing user creation code...
     name = request.form.get("name")
     username = request.form.get("username")
     email = request.form.get("email")
