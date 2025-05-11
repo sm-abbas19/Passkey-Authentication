@@ -1,14 +1,14 @@
-version: '3'
+version: "3"
 services:
   app:
     build:
       context: app
     environment:
-      DATABASE_URL: 'postgresql://databaseuser:supersecretdbpassword@db:5432/app'
+      DATABASE_URL: "postgresql://databaseuser:supersecretdbpassword@db:5432/app"
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: 'supersecretredispassword'
-      SECRET_KEY: 'supersecretrandomkeythatsreallysecure'
+      REDIS_PASSWORD: "supersecretredispassword"
+      SECRET_KEY: "supersecretrandomkeythatsreallysecure"
     volumes:
       - ./app:/app
     ports:
@@ -20,9 +20,9 @@ services:
   db:
     image: postgres:latest
     environment:
-      POSTGRES_USER: 'databaseuser'
-      POSTGRES_PASSWORD: 'supersecretdbpassword'
-      POSTGRES_DB: 'app'
+      POSTGRES_USER: "databaseuser"
+      POSTGRES_PASSWORD: "supersecretdbpassword"
+      POSTGRES_DB: "app"
     ports:
       - "5433:5432"
 

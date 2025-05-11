@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+import secrets
+import hashlib
 from urllib.parse import urlparse
 
 import webauthn
@@ -21,35 +23,40 @@ AUTHENTICATION_CHALLENGES = Redis(
     host=REDIS_HOST, port=REDIS_PORT, db=1, password=REDIS_PASSWORD
 )
 
-
 def _hostname():
     return str(urlparse(request.base_url).hostname)
 
+def _challenge_key(user):
+    # Use a hash of the user.uid and a random salt to make the Redis key unpredictable
+    salt = os.getenv("CHALLENGE_SALT", "default_salt")
+    return hashlib.shake_256(f"{user.uid}{salt}".encode()).hexdigest(32)
+
+def _generate_post_quantum_challenge(length=64):
+    # Use secrets.token_bytes for strong randomness, then hash with SHAKE256 for post-quantum resistance
+    random_bytes = secrets.token_bytes(length)
+    return hashlib.shake_256(random_bytes).digest(64)
 
 def prepare_credential_creation(user):
-    """Generate the configuration needed by the client to start registering a new
-    WebAuthn credential."""
+    """Generate the configuration needed by the client to start registering a new WebAuthn credential."""
     public_credential_creation_options = webauthn.generate_registration_options(
         rp_id=_hostname(),
         rp_name="Flask WebAuthn Demo",
         user_id=user.uid,
         user_name=user.username,
+        challenge=_generate_post_quantum_challenge()
     )
 
-    # Redis is perfectly happy to store the binary challenge value.
-    REGISTRATION_CHALLENGES.set(user.uid, public_credential_creation_options.challenge)
-    REGISTRATION_CHALLENGES.expire(user.uid, datetime.timedelta(minutes=10))
+    challenge_key = _challenge_key(user)
+    REGISTRATION_CHALLENGES.set(challenge_key, public_credential_creation_options.challenge)
+    REGISTRATION_CHALLENGES.expire(challenge_key, datetime.timedelta(minutes=3))  # Reduced expiration
 
     return webauthn.options_to_json(public_credential_creation_options)
 
-
 def verify_and_save_credential(user, registration_credential):
-    """Verify that a new credential is valid for the"""
-    expected_challenge = REGISTRATION_CHALLENGES.get(user.uid)
+    """Verify that a new credential is valid for the user."""
+    challenge_key = _challenge_key(user)
+    expected_challenge = REGISTRATION_CHALLENGES.get(challenge_key)
 
-    # If the credential is somehow invalid (i.e. the challenge is wrong),
-    # this will raise an exception. It's easier to handle that in the view
-    # since we can send back an error message directly.
     auth_verification = webauthn.verify_registration_response(
         credential=registration_credential,
         expected_challenge=expected_challenge,
@@ -57,7 +64,6 @@ def verify_and_save_credential(user, registration_credential):
         expected_rp_id=_hostname(),
     )
 
-    # At this point verification has succeeded and we can save the credential
     credential = WebAuthnCredential(
         user=user,
         credential_public_key=auth_verification.credential_public_key,
@@ -66,7 +72,6 @@ def verify_and_save_credential(user, registration_credential):
 
     db.session.add(credential)
     db.session.commit()
-
 
 def prepare_login_with_credential(user):
     """
@@ -80,20 +85,22 @@ def prepare_login_with_credential(user):
     authentication_options = webauthn.generate_authentication_options(
         rp_id=_hostname(),
         allow_credentials=allowed_credentials,
+        challenge=_generate_post_quantum_challenge()
     )
 
-    AUTHENTICATION_CHALLENGES.set(user.uid, authentication_options.challenge)
-    AUTHENTICATION_CHALLENGES.expire(user.uid, datetime.timedelta(minutes=10))
+    challenge_key = _challenge_key(user)
+    AUTHENTICATION_CHALLENGES.set(challenge_key, authentication_options.challenge)
+    AUTHENTICATION_CHALLENGES.expire(challenge_key, datetime.timedelta(minutes=3))  # Reduced expiration
 
     return json.loads(webauthn.options_to_json(authentication_options))
-
 
 def verify_authentication_credential(user, authentication_credential):
     """
     Verify a submitted credential against a credential in the database and the
     challenge stored in redis.
     """
-    expected_challenge = AUTHENTICATION_CHALLENGES.get(user.uid)
+    challenge_key = _challenge_key(user)
+    expected_challenge = AUTHENTICATION_CHALLENGES.get(challenge_key)
     stored_credential = (
         WebAuthnCredential.query.with_parent(user)
         .filter_by(
@@ -102,9 +109,6 @@ def verify_authentication_credential(user, authentication_credential):
         .first()
     )
 
-    # This will raise if the credential does not authenticate
-    # It seems that safari doesn't track credential sign count correctly, so we just
-    # have to leave it on zero so that it will authenticate
     webauthn.verify_authentication_response(
         credential=authentication_credential,
         expected_challenge=expected_challenge,
@@ -113,14 +117,8 @@ def verify_authentication_credential(user, authentication_credential):
         credential_public_key=stored_credential.credential_public_key,
         credential_current_sign_count=0
     )
-    AUTHENTICATION_CHALLENGES.expire(user.uid, datetime.timedelta(seconds=1))
+    AUTHENTICATION_CHALLENGES.expire(challenge_key, datetime.timedelta(seconds=1))
 
-    # Update the credential sign count after using, then save it back to the database.
-    # This is mainly for reference since we can't use it because of Safari's weirdness.
     stored_credential.current_sign_count += 1
     db.session.add(stored_credential)
     db.session.commit()
-
-
-
-

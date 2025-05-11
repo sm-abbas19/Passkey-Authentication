@@ -9,3 +9,4 @@ Werkzeug==2.0.3
 Flask-Login==0.5.0  # Use an older version that's compatible with Werkzeug 2.0.3
 webauthn==1.8.0
 pydantic==1.10.8
+Flask-Dance
