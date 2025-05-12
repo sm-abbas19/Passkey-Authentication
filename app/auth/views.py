@@ -1,4 +1,4 @@
-import datetime
+
 
 from flask import (
     Blueprint,
@@ -22,10 +22,95 @@ from webauthn.helpers.structs import RegistrationCredential, AuthenticationCrede
 from auth import security, util
 from models import User, db, PasskeyOperationLog
 
+from flask import Blueprint, make_response, render_template, redirect, url_for, request, session
+from flask_login import login_user, login_required, current_user
+from datetime import datetime, timedelta
+from models import User
+from webauthn.helpers.structs import RegistrationCredential, AuthenticationCredential
+import auth.security as security
+import auth.util as util
+
+
 auth = Blueprint("auth", __name__, template_folder="templates")
 
 
 import random
+
+@auth.route("/email-login")
+def email_login():
+    """Request login by emailed link."""
+    user_uid = session.get("login_user_uid")
+    user = User.query.filter_by(uid=user_uid).first()
+
+    # This is probably impossible, but seems like useful protection
+    if not user:
+        res = make_response(
+            render_template(
+                "auth/_partials/username_form.html", error="No matching user found."
+            )
+        )
+        session.pop("login_user_uid", None)
+        return res
+    login_url = security.generate_magic_link(user.uid)
+    util.send_email(
+        user.email,
+        "Flask WebAuthn Login",
+        f"Click or copy this link to log in. Link is valid for 5 minutes. {login_url} \n\nBest Regards, \n\nFlask WebAuthn Team \n\n"
+
+    )
+    res = make_response(render_template("auth/_partials/email_login_message.html"))
+    res.set_cookie(
+        "magic_link_user_uid",
+        user.uid,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=timedelta(minutes=15),
+    )
+    return res
+
+
+@auth.route("/magic-link")
+def magic_link():
+    """Handle incoming magic link authentications."""
+    url_secret = request.args.get("secret")
+    # Get user ID from the URL parameter first, then fall back to cookie
+    url_user_uid = request.args.get("uid")
+    cookie_user_uid = request.cookies.get("magic_link_user_uid")
+
+    # Try the URL parameter first (this works with email apps)
+    if url_user_uid:
+        user = User.query.filter_by(uid=url_user_uid).first()
+        if user and security.verify_magic_link(user.uid, url_secret):
+            login_user(user)
+            session['used_webauthn'] = False
+            return redirect(url_for("auth.user_profile"))
+
+    # Fall back to cookie-based approach (backward compatibility)
+    if cookie_user_uid:
+        user = User.query.filter_by(uid=cookie_user_uid).first()
+        if user and security.verify_magic_link(user.uid, url_secret):
+            login_user(user)
+            session['used_webauthn'] = False
+            return redirect(url_for("auth.user_profile"))
+
+    # If both approaches failed, display a helpful message
+    flash("This login link has expired or is invalid. Magic links are valid for 5 minutes only.", "warning")
+    return redirect(url_for("auth.login"))
+
+
+@auth.route('/create-credential')
+@login_required
+def create_credential():
+    """Start creation of new credentials by existing users."""
+    pcco_json = security.prepare_credential_creation(current_user)
+    return make_response(
+        render_template(
+            "auth/_partials/register_credential.html",
+            public_credential_creation_options=pcco_json,
+        )
+    )
+
 
 @auth.route("/register")
 def register():
@@ -95,6 +180,7 @@ def create_user():
         )
         
         login_user(user)
+        session['used_webauthn'] = False
         pcco_json = security.prepare_credential_creation(user)
         
         log_passkey_operation(
@@ -131,6 +217,7 @@ def add_credential():
     registration_credential = RegistrationCredential.parse_raw(request.get_data())
     try:
         security.verify_and_save_credential(current_user, registration_credential)
+        session['used_webauthn'] = True
         session["registration_user_uid"] = None
         
         log_passkey_operation(
@@ -149,7 +236,7 @@ def add_credential():
             httponly=True,
             secure=True,
             samesite="strict",
-            max_age=datetime.timedelta(days=30),
+            max_age=timedelta(days=30),
         )
         return res
     except InvalidRegistrationResponse as e:
@@ -229,7 +316,7 @@ def prepare_login():
             httponly=True,
             secure=True,
             samesite="strict",
-            max_age=datetime.timedelta(days=30),
+            max_age=timedelta(days=30),
         )
         return res
     except Exception as e:
@@ -272,7 +359,8 @@ def verify_login_credential():
     try:
         security.verify_authentication_credential(user, authentication_credential)
         login_user(user)
-        
+        session['used_webauthn'] = True
+
         log_passkey_operation(
             user.email,
             'authentication_complete',

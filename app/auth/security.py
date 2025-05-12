@@ -4,9 +4,11 @@ import os
 import secrets
 import hashlib
 from urllib.parse import urlparse
+from argon2 import PasswordHasher
+
 
 import webauthn
-from flask import request
+from flask import request, url_for
 from redis import Redis
 from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
@@ -23,6 +25,12 @@ AUTHENTICATION_CHALLENGES = Redis(
     host=REDIS_HOST, port=REDIS_PORT, db=1, password=REDIS_PASSWORD
 )
 
+EMAIL_AUTH_SECRETS = Redis(
+    host=REDIS_HOST, port=REDIS_PORT, db=2, password=REDIS_PASSWORD
+)
+
+ph = PasswordHasher()
+
 def _hostname():
     return str(urlparse(request.base_url).hostname)
 
@@ -30,6 +38,29 @@ def _challenge_key(user):
     # Use a hash of the user.uid and a random salt to make the Redis key unpredictable
     salt = os.getenv("CHALLENGE_SALT", "default_salt")
     return hashlib.shake_256(f"{user.uid}{salt}".encode()).hexdigest(32)
+
+def generate_magic_link(user_uid):
+    """Generate a special secret link to log in a user and save a hash of the secret."""
+    url_secret = secrets.token_urlsafe()
+    secret_hash = ph.hash(url_secret)
+    EMAIL_AUTH_SECRETS.set(user_uid, secret_hash)
+    EMAIL_AUTH_SECRETS.expire(user_uid, datetime.timedelta(minutes=5))
+    return url_for("auth.magic_link", secret=url_secret, uid=user_uid, _external=True, _scheme="https")
+
+def verify_magic_link(user_uid, secret):
+    """Verify the secret from a magic login link against the saved hash for that
+    user."""
+    secret_hash = EMAIL_AUTH_SECRETS.get(user_uid)
+    if not secret_hash:
+        return False
+    try:
+        if ph.verify(secret_hash, secret):
+            EMAIL_AUTH_SECRETS.expire(user_uid, datetime.timedelta(seconds=1))
+            return True
+    except Exception:
+        # Hash verification failed
+        pass
+    return False
 
 def _generate_post_quantum_challenge(length=64):
     # Use secrets.token_bytes for strong randomness, then hash with SHAKE256 for post-quantum resistance

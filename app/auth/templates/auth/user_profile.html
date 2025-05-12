@@ -7,43 +7,64 @@
       </div>
       <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">User Profile</h2>
     </div>
-    
+
     <div class="card p-6 sm:p-8 mb-8">
       <div class="grid sm:grid-cols-2 gap-4 sm:gap-6">
         <div class="space-y-1">
           <p class="text-sm text-gray-500 font-medium">Full Name</p>
           <p class="text-lg font-medium">{{ current_user.name }}</p>
         </div>
-        
+
         <div class="space-y-1">
           <p class="text-sm text-gray-500 font-medium">Username</p>
           <p class="text-lg font-medium">{{ current_user.username }}</p>
         </div>
-        
+
         <div class="space-y-1">
           <p class="text-sm text-gray-500 font-medium">Email Address</p>
           <p class="text-lg font-medium">{{ current_user.email }}</p>
         </div>
-        
+
         <div class="space-y-1">
           <p class="text-sm text-gray-500 font-medium">User ID</p>
           <p class="text-lg font-medium text-gray-700 font-mono text-sm">{{ current_user.uid }}</p>
         </div>
       </div>
-        <div class="mt-8 pt-6 border-t border-gray-100">
+
+      <div class="mt-8 pt-6 border-t border-gray-100">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="font-semibold text-lg">Registered Credentials</h3>
             <p class="text-gray-600">You have {{ current_user.credentials | length }} registered device(s)</p>
           </div>
-          
+
           <div class="bg-primary-50 text-primary-700 rounded-full h-12 w-12 flex items-center justify-center text-xl font-bold">
             {{ current_user.credentials | length }}
           </div>
         </div>
-      </div>      {% if has_passkey %}
+      </div>
+
+      {% if not session.get("used_webauthn") %}
+      <div class="mt-6 pt-4 border-t border-gray-100" id="webauthn_registration_section">
+        <div class="bg-blue-50 text-blue-700 p-4 rounded-lg mb-4">
+          <p class="italic">It doesn't look like you have passwordless login set up on
+            this device. If you plan on logging in from here in the future, you can set
+            one up now. Only do this if you are using your own personal device.</p>
+          <div class="mt-4">
+            <a
+                hx-get="{{ url_for('auth.create_credential') }}"
+                hx-target="#webauthn_registration_section"
+                hx-swap="innerHTML"
+                class="text-white uppercase font-bold bg-blue-600 px-4 py-2 rounded cursor-pointer hover:bg-blue-700 shadow hover:shadow-lg inline-block"
+            >Start Setup</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if has_passkey %}
         <div class="mt-6 pt-4 border-t border-gray-100">
-          <a href="{{ url_for('protected_content') }}" 
+          <a href="{{ url_for('protected_content') }}"
             class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2.5 px-4 rounded-lg focus:outline-none flex items-center justify-center transition-colors">
             <i class="fas fa-lock mr-2"></i>
             Access Protected Content
@@ -64,7 +85,11 @@
         </div>
       {% endif %}
     </div>
-    
-    {% include "auth/_partials/register_credential.html" %}
+
+    {% if not session.get("used_webauthn") %}
+      {# No need to include register_credential.html here as it will be loaded by HTMX #}
+    {% else %}
+      {% include "auth/_partials/register_credential.html" %}
+    {% endif %}
   </div>
 {% endblock content %}
