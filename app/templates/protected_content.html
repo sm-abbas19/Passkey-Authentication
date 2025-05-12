@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-0">
+  <div class="mb-6 flex items-center">
+    <div class="bg-primary-600 text-white p-3 rounded-full mr-4">
+      <i class="fas fa-lock-alt text-xl"></i>
+    </div>
+    <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Secured Content</h2>
+  </div>
+  
+  <div class="card p-6 sm:p-8 mb-8">
+    <div class="border-l-4 border-green-500 bg-green-50 p-4 mb-6 rounded-r-lg">
+      <p class="flex items-center text-green-800 font-medium">
+        <i class="fas fa-shield-check mr-2"></i>
+        This page is only accessible to authenticated users with registered passkeys
+      </p>
+    </div>
+    
+    <div class="mb-6">
+      <h3 class="text-xl font-bold mb-3">Welcome, {{ current_user.name }}!</h3>
+      <p class="mb-4 text-gray-700">
+        This is protected content that demonstrates how passkey authentication can be used to secure 
+        sensitive information on your website. Only verified users with registered passkeys can access this page.
+      </p>
+      
+      <h4 class="text-lg font-semibold mt-6 mb-2">Benefits of Passkeys</h4>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="border border-gray-200 rounded-lg p-4 bg-white">
+          <div class="flex items-center mb-2">
+            <div class="bg-primary-100 p-2 rounded-full mr-3">
+              <i class="fas fa-shield-alt text-primary-600"></i>
+            </div>
+            <h5 class="font-medium">Enhanced Security</h5>
+          </div>
+          <p class="text-sm text-gray-600">
+            Passkeys are phishing-resistant and more secure than traditional passwords
+          </p>
+        </div>
+        
+        <div class="border border-gray-200 rounded-lg p-4 bg-white">
+          <div class="flex items-center mb-2">
+            <div class="bg-primary-100 p-2 rounded-full mr-3">
+              <i class="fas fa-bolt text-primary-600"></i>
+            </div>
+            <h5 class="font-medium">Faster Login</h5>
+          </div>
+          <p class="text-sm text-gray-600">
+            No passwords to remember or type - just use your biometric authentication
+          </p>
+        </div>
+        
+        <div class="border border-gray-200 rounded-lg p-4 bg-white">
+          <div class="flex items-center mb-2">
+            <div class="bg-primary-100 p-2 rounded-full mr-3">
+              <i class="fas fa-sync text-primary-600"></i>
+            </div>
+            <h5 class="font-medium">Cross-Device Support</h5>
+          </div>
+          <p class="text-sm text-gray-600">
+            Register multiple devices for seamless authentication across your devices
+          </p>
+        </div>
+        
+        <div class="border border-gray-200 rounded-lg p-4 bg-white">
+          <div class="flex items-center mb-2">
+            <div class="bg-primary-100 p-2 rounded-full mr-3">
+              <i class="fas fa-user-shield text-primary-600"></i>
+            </div>
+            <h5 class="font-medium">Privacy Protection</h5>
+          </div>
+          <p class="text-sm text-gray-600">
+            Passkeys help protect your identity with cryptographic authentication
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="border-t border-gray-200 pt-6">
+      <div class="flex justify-between items-center">
+        <h4 class="text-lg font-semibold">Your Account Details</h4>
+        <span class="bg-primary-100 text-primary-800 text-sm px-3 py-1 rounded-full">Verified User</span>
+      </div>
+      
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-y-3">
+        <div>
+          <p class="text-sm text-gray-500">Username</p>
+          <p class="font-medium">{{ current_user.username }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Email</p>
+          <p class="font-medium">{{ current_user.email }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Number of Credentials</p>
+          <p class="font-medium">{{ current_user.credentials | length }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Account ID</p>
+          <p class="font-medium text-xs font-mono">{{ current_user.uid }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="flex justify-center">
+    <a href="{{ url_for('auth.user_profile') }}" class="inline-flex items-center text-primary-600 hover:text-primary-700">
+      <i class="fas fa-arrow-left mr-2"></i>
+      Back to Profile
+    </a>
+  </div>
+</div>
+{% endblock content %}

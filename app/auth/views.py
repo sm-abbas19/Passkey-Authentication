@@ -41,7 +41,7 @@ def register():
     # Pass the question to the template
     captcha_question = f"What is {num1} + {num2}?"
     
-    return render_template("auth/register.html", captcha_question=captcha_question)
+    return render_template("auth/register.html", captcha_question=captcha_question, error=None)
 
 
 def log_passkey_operation(user_email, operation_type, status, details=None):

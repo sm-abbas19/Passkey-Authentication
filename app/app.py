@@ -34,6 +34,21 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def passkey_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            flash('You need to login first.', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Check if the user has at least one registered credential
+        if not current_user.credentials or len(current_user.credentials) == 0:
+            flash('You need to register a passkey before accessing this page.', 'error')
+            return redirect(url_for('auth.user_profile'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/admin/dashboard")
 @login_required
 @admin_required
@@ -73,10 +88,36 @@ def index():
     return render_template("index.html")
 
 @app.context_processor
-def inject_is_admin():
+def inject_global_variables():
     is_admin = False
+    has_passkey = False
+    
     if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+        # Check admin status
         allowed_emails = AdminSettings.get_allowed_emails()
         if current_user.email in allowed_emails:
             is_admin = True
-    return dict(is_admin=is_admin)
+        
+        # Check if user has registered passkeys
+        if hasattr(current_user, 'credentials') and current_user.credentials and len(current_user.credentials) > 0:
+            has_passkey = True
+    
+    return dict(
+        is_admin=is_admin,
+        has_passkey=has_passkey
+    )
+
+@app.route("/protected-content")
+@login_required
+@passkey_required
+def protected_content():
+    """A page that requires both login and a registered passkey to access."""
+    # Log the successful access to protected content
+    from auth.views import log_passkey_operation
+    log_passkey_operation(
+        current_user.email,
+        'protected_content_access',
+        'success',
+        f'User {current_user.username} accessed protected content'
+    )
+    return render_template("protected_content.html")
