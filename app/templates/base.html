@@ -9,7 +9,11 @@
   >
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Passkey Authentication</title>
-
+  <!-- 
+    NOTE: Using Tailwind via CDN is not recommended for production.
+    For production, use a build process with Tailwind CLI:
+    https://tailwindcss.com/docs/installation
+  -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -36,19 +40,42 @@
       }
     }
   </script>
-  
-  <!-- Fonts -->
+    <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- HTMX -->
+    <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.7.0"></script>
   <!-- Simple WebAuthn -->
   <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
   <!-- FontAwesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" referrerpolicy="no-referrer">
   <script>
-    const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
+    // Make sure SimpleWebAuthn is loaded properly
+    document.addEventListener('DOMContentLoaded', function() {
+      // SimpleWebAuthn identifies itself differently in newer versions
+      const SimpleWebAuthnAPI = window.SimpleWebAuthnBrowser || window.SimpleWebAuthn;
+      
+      if (SimpleWebAuthnAPI) {
+        // Export the functions to global scope for easy access in templates
+        window.startRegistration = SimpleWebAuthnAPI.startRegistration;
+        window.startAuthentication = SimpleWebAuthnAPI.startAuthentication;
+        
+        console.log('SimpleWebAuthn loaded successfully!');
+      } else {
+        console.error('SimpleWebAuthn is not defined. Check if the script loaded correctly.');
+        // Try to load it again if it failed
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js';
+        script.onload = function() {
+          const SimpleWebAuthnAPI = window.SimpleWebAuthnBrowser || window.SimpleWebAuthn;
+          if (SimpleWebAuthnAPI) {
+            window.startRegistration = SimpleWebAuthnAPI.startRegistration;
+            window.startAuthentication = SimpleWebAuthnAPI.startAuthentication;
+            console.log('SimpleWebAuthn loaded successfully on retry!');
+          }
+        };
+        document.head.appendChild(script);
+      }
+    });
   </script>
   
   <style>
@@ -73,13 +100,18 @@
       </div>
       <span class="font-bold text-xl text-primary-700">SecurePass</span>
     </a>
-    <nav class="flex flex-wrap justify-center sm:justify-end gap-4 sm:space-x-6 items-center">
-      {% if current_user.is_authenticated %}
+    <nav class="flex flex-wrap justify-center sm:justify-end gap-4 sm:space-x-6 items-center">      {% if current_user.is_authenticated %}
         <div>
           <a href="{{ url_for('auth.user_profile') }}" class="text-gray-600 hover:text-primary-600 font-medium transition duration-150">
             <i class="far fa-user mr-1"></i> Profile
           </a>
+        </div>        {% if has_passkey %}
+        <div>
+          <a href="{{ url_for('protected_content') }}" class="text-gray-600 hover:text-primary-600 font-medium transition duration-150">
+            <i class="fas fa-lock mr-1"></i> Protected Content
+          </a>
         </div>
+        {% endif %}
         {% if is_admin %}
         <div>
           <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 hover:text-primary-600 font-medium transition duration-150">
