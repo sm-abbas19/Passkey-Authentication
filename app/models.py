@@ -1,4 +1,5 @@
 import uuid
+import datetime
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
@@ -61,3 +62,37 @@ class WebAuthnCredential(db.Model):
 
     def __repr__(self):
         return f"<Credential {self.credential_id}>"
+
+
+class AdminSettings(db.Model):
+    """Settings for admin access"""
+    id = db.Column(db.Integer, primary_key=True)
+    allowed_admin_emails = db.Column(db.String(1000), nullable=False, default='hsardar.bscs22seecs@seecs.edu.pk')  # Comma-separated list of emails
+
+    @classmethod
+    def get_allowed_emails(cls):
+        settings = cls.query.first()
+        if not settings:
+            settings = cls()
+            db.session.add(settings)
+            db.session.commit()
+        return [email.strip() for email in settings.allowed_admin_emails.split(',')]
+
+
+class PasskeyOperationLog(db.Model):
+    """Log of passkey operations"""
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    user_email = db.Column(db.String(255), nullable=False)
+    operation_type = db.Column(db.String(50), nullable=False)  # e.g., 'challenge_sent', 'public_key_created'
+    status = db.Column(db.String(20), nullable=False)  # 'success' or 'failed'
+    details = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'user_email': self.user_email,
+            'operation_type': self.operation_type,
+            'status': self.status,
+            'details': self.details
+        }

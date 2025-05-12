@@ -20,7 +20,7 @@ from webauthn.helpers.exceptions import (
 from webauthn.helpers.structs import RegistrationCredential, AuthenticationCredential
 
 from auth import security, util
-from models import User, db
+from models import User, db, PasskeyOperationLog
 
 auth = Blueprint("auth", __name__, template_folder="templates")
 
@@ -43,6 +43,16 @@ def register():
     
     return render_template("auth/register.html", captcha_question=captcha_question)
 
+
+def log_passkey_operation(user_email, operation_type, status, details=None):
+    log = PasskeyOperationLog(
+        user_email=user_email,
+        operation_type=operation_type,
+        status=status,
+        details=details
+    )
+    db.session.add(log)
+    db.session.commit()
 
 @auth.route("/create-user", methods=["POST"])
 def create_user():
@@ -72,25 +82,46 @@ def create_user():
     username = request.form.get("username")
     email = request.form.get("email")
 
-    user = User(name=name, username=username, email=email)
     try:
+        user = User(name=name, username=username, email=email)
         db.session.add(user)
         db.session.commit()
+        
+        log_passkey_operation(
+            email,
+            'user_created',
+            'success',
+            f'User {username} created successfully'
+        )
+        
+        login_user(user)
+        pcco_json = security.prepare_credential_creation(user)
+        
+        log_passkey_operation(
+            email,
+            'challenge_sent',
+            'success',
+            f'Registration challenge generated for {username}'
+        )
+        
+        return make_response(
+            render_template(
+                "auth/_partials/register_credential.html",
+                public_credential_creation_options=pcco_json,
+            )
+        )
     except IntegrityError:
+        log_passkey_operation(
+            email,
+            'user_creation',
+            'failed',
+            'Username or email already in use'
+        )
         return render_template(
             "auth/_partials/user_creation_form.html",
             error="That username or email address is already in use. "
             "Please enter a different one.",
         )
-
-    login_user(user)
-    pcco_json = security.prepare_credential_creation(user)
-    return make_response(
-        render_template(
-            "auth/_partials/register_credential.html",
-            public_credential_creation_options=pcco_json,
-        )
-    )
 
 
 @auth.route("/add-credential", methods=["POST"])
@@ -101,6 +132,14 @@ def add_credential():
     try:
         security.verify_and_save_credential(current_user, registration_credential)
         session["registration_user_uid"] = None
+        
+        log_passkey_operation(
+            current_user.email,
+            'public_key_created',
+            'success',
+            f'Passkey registered for {current_user.username}'
+        )
+        
         res = util.make_json_response(
             {"verified": True, "next": url_for("auth.user_profile")}
         )
@@ -113,7 +152,13 @@ def add_credential():
             max_age=datetime.timedelta(days=30),
         )
         return res
-    except InvalidRegistrationResponse:
+    except InvalidRegistrationResponse as e:
+        log_passkey_operation(
+            current_user.email,
+            'public_key_creation',
+            'failed',
+            str(e)
+        )
         abort(make_response('{"verified": false}', 400))
 
 
@@ -142,7 +187,6 @@ def login():
 def prepare_login():
     """Prepare login options for a user based on their username or email"""
     username_or_email = request.form.get("username_email", "").lower()
-    # The lower function just does case insensitivity for our.
     user = User.query.filter(
         or_(
             func.lower(User.username) == username_or_email,
@@ -150,33 +194,55 @@ def prepare_login():
         )
     ).first()
 
-    # if no user matches, send back the form with an error message
     if not user:
+        log_passkey_operation(
+            username_or_email,
+            'login_attempt',
+            'failed',
+            'No matching user found'
+        )
         return render_template(
             "auth/_partials/username_form.html", error="No matching user found"
         )
 
-    auth_options = security.prepare_login_with_credential(user)
-
-    res = make_response(
-        render_template(
-            "auth/_partials/select_login.html",
-            auth_options=auth_options,
-            username=user.username,
+    try:
+        auth_options = security.prepare_login_with_credential(user)
+        
+        log_passkey_operation(
+            user.email,
+            'auth_challenge_sent',
+            'success',
+            f'Authentication challenge sent to {user.username}'
         )
-    )
-
-    # set the user uid on the session to get when we are authenticating later.
-    session["login_user_uid"] = user.uid
-    res.set_cookie(
-        "user_uid",
-        user.uid,
-        httponly=True,
-        secure=True,
-        samesite="strict",
-        max_age=datetime.timedelta(days=30),
-    )
-    return res
+        
+        res = make_response(
+            render_template(
+                "auth/_partials/select_login.html",
+                auth_options=auth_options,
+                username=user.username,
+            )
+        )
+        session["login_user_uid"] = user.uid
+        res.set_cookie(
+            "user_uid",
+            user.uid,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=datetime.timedelta(days=30),
+        )
+        return res
+    except Exception as e:
+        log_passkey_operation(
+            user.email,
+            'auth_challenge',
+            'failed',
+            str(e)
+        )
+        return render_template(
+            "auth/_partials/username_form.html",
+            error="Error preparing login. Please try again."
+        )
 
 
 @auth.route("/login-switch-user")
@@ -194,18 +260,37 @@ def verify_login_credential():
     user_uid = session.get("login_user_uid")
     user = User.query.filter_by(uid=user_uid).first()
     if not user:
+        log_passkey_operation(
+            'unknown',
+            'login_verification',
+            'failed',
+            'No user found in session'
+        )
         abort(make_response('{"verified": false}', 400))
 
     authentication_credential = AuthenticationCredential.parse_raw(request.get_data())
     try:
         security.verify_authentication_credential(user, authentication_credential)
         login_user(user)
-
+        
+        log_passkey_operation(
+            user.email,
+            'authentication_complete',
+            'success',
+            f'User {user.username} authenticated successfully'
+        )
+        
         next_ = request.args.get("next")
         if not next_ or not util.is_safe_url(next_):
             next_ = url_for("auth.user_profile")
         return util.make_json_response({"verified": True, "next": next_})
-    except InvalidAuthenticationResponse:
+    except InvalidAuthenticationResponse as e:
+        log_passkey_operation(
+            user.email,
+            'authentication',
+            'failed',
+            str(e)
+        )
         abort(make_response('{"verified": false}', 400))
 
 

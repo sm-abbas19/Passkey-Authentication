@@ -80,6 +80,13 @@
             <i class="far fa-user mr-1"></i> Profile
           </a>
         </div>
+        {% if is_admin %}
+        <div>
+          <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 hover:text-primary-600 font-medium transition duration-150">
+            <i class="fas fa-gauge mr-1"></i> Admin Dashboard
+          </a>
+        </div>
+        {% endif %}
         <div>
           <a href="{{ url_for('auth.logout') }}" class="text-gray-600 hover:text-primary-600 font-medium transition duration-150">
             <i class="fas fa-sign-out-alt mr-1"></i> Logout
