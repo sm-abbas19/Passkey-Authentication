@@ -1,17 +1,32 @@
-<h1 class="font-bold text-2xl">Check Your Email!</h1>
-<p class="mt-4 text-xl">You should have an email with a link you can click to login
-  automatically. Link is valid for 5 minutes only. Once you're logged in, you can
-  enable biometric login to make future visits as fast and secure as possible.
-</p>
-
-<div class="mt-6 py-4 px-4 bg-blue-50 rounded-lg text-blue-800">
-  <p class="flex items-center">
-    <i class="fas fa-info-circle mr-2 text-blue-500"></i>
-    <strong>Mobile Users:</strong> If clicking the link from your email app doesn't work, try copying the link and pasting it directly into your browser.
+<div class="text-center sm:text-left px-4 sm:px-0">
+  <h1 class="font-bold text-xl sm:text-2xl">Check Your Email!</h1>
+  <p class="mt-3 sm:mt-4 text-base sm:text-xl">
+    You should have an email with a link you can click to login
+    automatically. Link is valid for 5 minutes only.
   </p>
-</div>
 
-<div class="mt-4 py-4 px-4 bg-gray-50 rounded-lg text-gray-700">
-  <p>Once you're logged in, you can enable biometric login to make future visits as fast and secure as possible.</p>
-</div>
+  <div class="mt-4 sm:mt-6 py-3 sm:py-4 px-3 sm:px-4 bg-blue-50 rounded-lg text-blue-800">
+    <p class="flex flex-col sm:flex-row items-center sm:items-start text-sm sm:text-base">
+      <i class="fas fa-info-circle mb-2 sm:mb-0 sm:mr-2 text-blue-500 text-lg"></i>
+      <span>
+        <strong class="block sm:inline">Mobile Users:</strong>
+        <span class="block sm:inline sm:ml-1">If clicking the link from your email app doesn't work, try copying the link and pasting it directly into your browser.</span>
+      </span>
+    </p>
+  </div>
 
+  <div class="mt-3 sm:mt-4 py-3 sm:py-4 px-3 sm:px-4 bg-gray-50 rounded-lg text-gray-700 text-sm sm:text-base">
+    <p>Once you're logged in, you can enable biometric login to make future visits as fast and secure as possible.</p>
+  </div>
+  
+  <div class="mt-6 sm:mt-8">
+    <button 
+      type="button"
+      class="w-full sm:w-auto px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors"
+      onclick="window.location.reload()"
+    >
+      <i class="fas fa-sync-alt mr-2"></i>
+      Refresh Page
+    </button>
+  </div>
+</div>

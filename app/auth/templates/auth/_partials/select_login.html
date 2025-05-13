@@ -6,54 +6,48 @@
   <p class="mt-2 text-sm sm:text-base text-gray-600">Hello, {{ username }}</p>
 </div>
 
-<div class="flex space-x-2">
-  <a
+<div class="space-y-6">
+  <div class="text-center">
+    <p class="text-gray-700">
+      Choose your preferred sign-in method below
+    </p>
+  </div>
+  
+  <div class="space-y-4">
+    <button
+      id="start-login"
+      class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+    >
+      <i class="fas fa-fingerprint mr-2 text-lg"></i>
+      Sign in with Device
+    </button>
+    
+    <a
       hx-get="{{ url_for('auth.email_login') }}"
       hx-target="#page-content"
       hx-swap="innerHTML"
-      class="text-white uppercase font-bold bg-orange-600 cursor-pointer px-4 py-2 rounded"
-  >
-    Email Login
-  </a>
-  <button
-      class="text-white uppercase font-bold bg-green-600 px-4 py-2 rounded"
-      id="start-login"
-  >
-    Device Login
-  </button>
+      class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+    >
+      <i class="far fa-envelope mr-2"></i>
+      Email Login
+    </a>
+    
+    <a
+      href="{{ url_for('auth.login_switch_user') }}"
+      class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+    >
+      <i class="fas fa-user-alt mr-2"></i>
+      Sign in as Different User
+    </a>
+  </div>
+  
+  <div class="border-t border-gray-200 pt-4 mt-4">
+    <p class="text-xs text-gray-500">
+      If this is your first time using this device, or if your device doesn't support biometrics,
+      you may need to set up device authentication after logging in with an alternative method.
+    </p>
+  </div>
 </div>
-
-<div class="space-y-6">
-    <div class="text-center">
-      <p class="text-gray-700">
-        Choose your preferred sign-in method below
-      </p>
-    </div>
-    
-    <div class="space-y-4">
-      <button
-        id="start-login"
-        class="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-      >
-        <i class="fas fa-fingerprint mr-2 text-lg"></i>
-        Sign in with Device
-      </button>
-      
-      <a
-        href="{{ url_for('auth.login_switch_user') }}"
-        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-      >
-        <i class="fas fa-user-alt mr-2"></i>
-        Sign in as Different User
-      </a>
-    </div>
-    
-    <div class="border-t border-gray-200 pt-4 mt-4">
-      <p class="text-xs text-gray-500">
-        If this is your first time using this device, or if your device doesn't support biometrics,
-        you may need to set up device authentication after logging in with an alternative method.
-      </p>
-    </div>  </div>
 
 <script>
     document.getElementById('start-login').addEventListener('click', async () => {
