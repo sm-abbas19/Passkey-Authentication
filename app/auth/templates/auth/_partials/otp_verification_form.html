@@ -1,0 +1,79 @@
+<div class="max-w-md mx-auto px-4 sm:px-0">
+  <div class="text-center mb-6 sm:mb-8">
+    <div class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary-100 text-primary-600 rounded-full mb-3 sm:mb-4">
+      <i class="fas fa-shield-alt text-2xl sm:text-3xl"></i>
+    </div>
+    <h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Verify Your Email</h2>
+    <p class="mt-2 text-sm sm:text-base text-gray-600">Enter the verification code sent to {{ email }}</p>
+  </div>
+  
+  <div class="card p-6 sm:p-8">
+    <form hx-post="{{ url_for('auth.verify_otp') }}" hx-swap="outerHTML" class="space-y-4">
+      {% if error %}
+        <div class="bg-red-50 text-red-600 px-4 py-3 rounded-lg flex items-center text-sm">
+          <i class="fas fa-exclamation-circle mr-2"></i>
+          {{ error }}
+        </div>
+      {% endif %}
+      
+      <input type="hidden" name="name" value="{{ name }}">
+      <input type="hidden" name="username" value="{{ username }}">
+      <input type="hidden" name="email" value="{{ email }}">
+      
+      <div class="space-y-2">
+        <label for="otp" class="block text-sm font-medium text-gray-700">Verification Code</label>
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            <i class="fas fa-key"></i>
+          </div>
+          <input
+            type="text"
+            name="otp"
+            id="otp"
+            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-center tracking-wider font-mono text-lg"
+            placeholder="Enter 6-digit code"
+            required
+            pattern="[0-9]{6}"
+            inputmode="numeric"
+            maxlength="6"
+            autocomplete="one-time-code"
+            autofocus
+          >
+        </div>
+      </div>
+      
+      <div class="pt-2">
+        <button
+          type="submit"
+          class="w-full bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 transition-colors"
+        >
+          Verify & Continue
+        </button>
+      </div>
+      
+      <div class="text-center text-sm text-gray-600 mt-4">
+        <p>Didn't receive the code?</p>
+        <a 
+          href="#" 
+          class="text-primary-600 font-medium hover:underline"
+          hx-post="{{ url_for('auth.resend_otp') }}"
+          hx-vals='{"email": "{{ email }}", "name": "{{ name }}", "username": "{{ username }}"}'
+          hx-swap="none"
+          hx-indicator="#resend-indicator"
+        >
+          <span>Resend Code</span>
+          <span id="resend-indicator" class="htmx-indicator">
+            <i class="fas fa-circle-notch fa-spin"></i>
+          </span>
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <div class="mt-8 text-center">
+    <div class="inline-block rounded-full bg-primary-50 p-3">
+      <i class="fas fa-envelope text-primary-600"></i>
+    </div>
+    <p class="mt-2 text-sm text-gray-600">Check your email inbox and spam folder<br>for the verification code</p>
+  </div>
+</div>

@@ -1,7 +1,10 @@
 import json
+import random
+import string
 from urllib.parse import urlparse, urljoin
+from datetime import datetime, timedelta
 
-from flask import make_response, request
+from flask import make_response, request, session
 
 
 def make_json_response(body, status=200):
@@ -14,6 +17,40 @@ def is_safe_url(target):
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
     return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
+
+
+def generate_otp():
+    """Generate a 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
+
+def store_otp(email, otp):
+    """Store OTP in session with expiration"""
+    expiration = datetime.now() + timedelta(minutes=10)
+    session[f"otp_{email}"] = {
+        "otp": otp,
+        "expires": expiration.timestamp()
+    }
+
+
+def verify_otp(email, provided_otp):
+    """Verify the provided OTP against stored OTP"""
+    stored_data = session.get(f"otp_{email}")
+    
+    if not stored_data:
+        return False
+    
+    if datetime.now().timestamp() > stored_data.get('expires'):
+        # OTP expired
+        session.pop(f"otp_{email}", None)
+        return False
+    
+    if stored_data.get('otp') == provided_otp:
+        # OTP matched, clear it from session
+        session.pop(f"otp_{email}", None)
+        return True
+    
+    return False
 
 import smtplib
 import ssl
